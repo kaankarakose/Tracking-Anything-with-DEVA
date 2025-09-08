@@ -12,12 +12,14 @@ class ObjectInfo:
                  id: int,
                  category_id: Optional[int] = None,
                  isthing: Optional[bool] = None,
-                 score: Optional[float] = None):
-        self.id = id
+                 score: Optional[float] = None,
+                 mask = None):
+        self.id = id   
         self.category_ids = [category_id]
         self.scores = [score]
         self.isthing = isthing
         self.poke_count = 0  # number of detections since last this object was last seen
+        self.masks = [mask]
 
     def poke(self) -> None:
         self.poke_count += 1
@@ -28,7 +30,7 @@ class ObjectInfo:
     def merge(self, other) -> None:
         self.category_ids.extend(other.category_ids)
         self.scores.extend(other.scores)
-
+        self.masks.extend(other.masks)
     def vote_category_id(self) -> Optional[int]:
         category_ids = [c for c in self.category_ids if c is not None]
         if len(category_ids) == 0:
@@ -51,6 +53,8 @@ class ObjectInfo:
         self.category_ids = other.category_ids
         self.scores = other.scores
         self.isthing = other.isthing
+        self.masks = other.masks
+
 
     def __hash__(self):
         return hash(self.id)

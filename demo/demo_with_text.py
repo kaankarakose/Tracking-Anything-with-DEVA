@@ -5,7 +5,9 @@ from argparse import ArgumentParser
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
-
+import sys
+sys.path.append('/home/kaan/Projects/object_manupilation/track_anything_deva/Tracking-Anything-with-DEVA') 
+sys.path.append('/home/kaan/Projects/object_manupilation/track_anything_deva/GroundingDINO/GroundingDINO')
 from deva.inference.inference_core import DEVAInferenceCore
 from deva.inference.data.simple_video_reader import SimpleVideoReader, no_collate
 from deva.inference.result_utils import ResultSaver
@@ -16,6 +18,7 @@ from deva.ext.grounding_dino import get_grounding_dino_model
 from deva.ext.with_text_processor import process_frame_with_text as process_frame
 
 from tqdm import tqdm
+
 import json
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@ from deva.inference.object_info import ObjectInfo
 
 def get_sam_model(config: Dict, device: str) -> SamAutomaticMaskGenerator:
     variant = config['sam_variant'].lower()
-    if variant == 'mobile':
+    if variant == 'mobile': # kaan
         MOBILE_SAM_CHECKPOINT_PATH = config['MOBILE_SAM_CHECKPOINT_PATH']
 
         # Building Mobile SAM model
@@ -23,14 +23,16 @@ def get_sam_model(config: Dict, device: str) -> SamAutomaticMaskGenerator:
         mobile_sam = setup_mobile_sam()
         mobile_sam.load_state_dict(checkpoint, strict=True)
         mobile_sam.to(device=device)
+        torch.cuda.empty_cache()
         auto_sam = SamAutomaticMaskGenerator(mobile_sam,
                                              points_per_side=config['SAM_NUM_POINTS_PER_SIDE'],
                                              points_per_batch=config['SAM_NUM_POINTS_PER_BATCH'],
                                              pred_iou_thresh=config['SAM_PRED_IOU_THRESHOLD'])
+        torch.cuda.empty_cache()
     elif variant == 'original':
         SAM_ENCODER_VERSION = config['SAM_ENCODER_VERSION']
         SAM_CHECKPOINT_PATH = config['SAM_CHECKPOINT_PATH']
-
+        torch.cuda.empty_cache()
         # Building SAM Model and SAM Predictor
         sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH).to(
             device=device)
@@ -38,6 +40,7 @@ def get_sam_model(config: Dict, device: str) -> SamAutomaticMaskGenerator:
                                              points_per_side=config['SAM_NUM_POINTS_PER_SIDE'],
                                              points_per_batch=config['SAM_NUM_POINTS_PER_BATCH'],
                                              pred_iou_thresh=config['SAM_PRED_IOU_THRESHOLD'])
+        torch.cuda.empty_cache()
     else:
         raise ValueError(f'Unknown SAM variant: {config["SAM_VARIANT"]}')
 
@@ -56,7 +59,6 @@ def auto_segment(config: Dict, auto_sam: SamAutomaticMaskGenerator, image: np.nd
              a list of segment info, see object_utils.py for definition
     """
     device = auto_sam.predictor.device
-
     h, w = image.shape[:2]
     if min_side > 0:
         scale = min_side / min(h, w)
@@ -89,7 +91,7 @@ def auto_segment(config: Dict, auto_sam: SamAutomaticMaskGenerator, image: np.nd
         mask_data = auto_sam.generate(image, positive_points, negative_points)
     else:
         mask_data = auto_sam.generate(image)
-
+    #print(mask_data.__dict__)
     curr_id = 1
     segments_info = []
 
@@ -123,7 +125,8 @@ def auto_segment(config: Dict, auto_sam: SamAutomaticMaskGenerator, image: np.nd
                     if mask_area / original_area < config['SAM_OVERLAP_THRESHOLD']:
                         continue
                     output_mask[mask] = curr_id
-                    segments_info.append(ObjectInfo(id=curr_id, score=predicted_iou[k].item()))
+                    segments_info.append(ObjectInfo(id=curr_id, score=predicted_iou[k].item(), mask = output_mask ))
+                    
                     curr_id += 1
         else:
             # prefer smaller objects
@@ -139,7 +142,8 @@ def auto_segment(config: Dict, auto_sam: SamAutomaticMaskGenerator, image: np.nd
             for k in range(scored_masks.shape[0]):
                 mask = (output_mask == (k + 1))
                 if mask.sum() > 0:
-                    segments_info.append(ObjectInfo(id=curr_id, score=predicted_iou[k].item()))
+                    segments_info.append(ObjectInfo(id=curr_id, score=predicted_iou[k].item(), mask = output_mask))
+                    ##TODO includes the real masks that we need....
                     curr_id += 1
 
     return output_mask, segments_info

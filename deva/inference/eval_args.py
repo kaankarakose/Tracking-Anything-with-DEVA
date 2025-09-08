@@ -5,7 +5,7 @@ from deva.model.network import DEVA
 
 
 def add_common_eval_args(parser: ArgumentParser):
-    parser.add_argument('--model', default='./saves/DEVA-propagation.pth')
+    parser.add_argument('--model', default=r'/home/kaan/Projects/object_manupilation/track_anything_deva/Tracking-Anything-with-DEVA/saves/DEVA-propagation.pth')
 
     parser.add_argument('--output', default=None)
     parser.add_argument(
@@ -41,17 +41,17 @@ def add_common_eval_args(parser: ArgumentParser):
     parser.add_argument('--mem_every',
                         help='r in XMem. Increase to improve running speed.',
                         type=int,
-                        default=5)
+                        default=5) # kaan
     parser.add_argument(
         '--chunk_size',
-        default=-1,
+        default=2,
         type=int,
         help='''Number of objects to process in parallel as a batch; -1 for unlimited. 
         Set to a small number to save memory.''')
 
     parser.add_argument(
         '--size',
-        default=480,
+        default=640,
         type=int,
         help='Resize the shorter side to this size. -1 to use original resolution. ')
 
@@ -61,11 +61,16 @@ def get_model_and_config(parser: ArgumentParser):
     config = vars(args)
     config['enable_long_term'] = not config['disable_long_term']
 
-    # Load our checkpoint
+
+    # device = torch.device("cuda:1")
+    # # Load our checkpoint
+    # network = DEVA(config).to(device).eval()
     network = DEVA(config).cuda().eval()
+
     if args.model is not None:
         model_weights = torch.load(args.model)
         network.load_weights(model_weights)
+        network.eval()
     else:
         print('No model loaded.')
 

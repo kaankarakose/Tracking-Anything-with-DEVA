@@ -694,6 +694,8 @@ def register_tiny_vit_model(fn):
 
         return model
 
+        
+
     # rename the name of fn_wrapper
     fn_wrapper.__name__ = fn.__name__
     return register_model(fn_wrapper)

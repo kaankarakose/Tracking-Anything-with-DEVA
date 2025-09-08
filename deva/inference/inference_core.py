@@ -64,6 +64,7 @@ class DEVAInferenceCore:
         # image: 1*3*H*W
         # ms_features: from the key encoder
         # prob: 1*num_objects*H*W, 0~1
+        print(prob.shape)
         if prob.shape[1] == 0:
             # nothing to add
             warnings.warn('Empty object mask!', RuntimeWarning)
@@ -91,11 +92,15 @@ class DEVAInferenceCore:
                  selection: torch.Tensor,
                  ms_features: Iterable[torch.Tensor],
                  update_sensory: bool = True) -> torch.Tensor:
+
         if not self.memory.engaged:
+            torch.cuda.empty_cache()
             warnings.warn('Trying to segment without any memory!', RuntimeWarning)
-            return torch.zeros((1, key.shape[-2] * 16, key.shape[-1] * 16),
+            return torch.ones((1, key.shape[-2] * 16, key.shape[-1] * 16),
                                device=key.device,
                                dtype=key.dtype)
+
+            
         memory_readout = self.memory.match_memory(key, selection)
         memory_readout = self.object_manager.realize_dict(memory_readout)
         memory_readout = memory_readout.unsqueeze(0)

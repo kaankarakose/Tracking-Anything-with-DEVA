@@ -32,6 +32,11 @@ def process_frame_automatic(deva: DEVAInferenceCore,
                             ti: int,
                             image_np: np.ndarray = None) -> None:
     # image_np, if given, should be in RGB
+
+    #TODO:
+    #  Here decord implementation is needed. Currently, frame-wise reading is the case.
+    
+
     if image_np is None:
         image_np = cv2.imread(frame_path)
         image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
@@ -40,6 +45,7 @@ def process_frame_automatic(deva: DEVAInferenceCore,
     h, w = image_np.shape[:2]
     new_min_side = cfg['size']
     suppress_small_mask = cfg['suppress_small_objects']
+    
     need_resize = new_min_side > 0
     image = get_input_frame_for_deva(image_np, new_min_side)
 
@@ -59,6 +65,7 @@ def process_frame_automatic(deva: DEVAInferenceCore,
 
             mask, segments_info = make_segmentation(cfg, image_np, forward_mask, sam_model,
                                                     new_min_side, suppress_small_mask)
+  
             frame_info.mask = mask
             frame_info.segments_info = segments_info
             frame_info.image_np = image_np  # for visualization only

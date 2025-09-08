@@ -10,13 +10,23 @@ from threading import Thread
 from queue import Queue
 from dataclasses import dataclass
 import copy
-
+import cv2 as cv
 import numpy as np
 import supervision as sv
+import hashlib
 
 from deva.utils.pano_utils import ID2RGBConverter
 from deva.inference.object_manager import ObjectManager
 from deva.inference.object_info import ObjectInfo
+
+import json
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 class ResultSaver:
@@ -32,7 +42,7 @@ class ResultSaver:
         self.dataset = dataset.lower()
         self.palette = palette
         self.object_manager = object_manager
-
+        
         self.need_remapping = False
         self.json_style = None
         self.output_postfix = None
@@ -100,7 +110,7 @@ class ResultSaver:
                                                                                                  0]
         # Probability mask -> index mask
         mask = torch.argmax(prob, dim=0)
-
+        #print(mask.shape)
         args = ResultArgs(
             saver=self,
             mask=mask.cpu(),
@@ -142,7 +152,15 @@ def save_result(queue: Queue):
         if args is None:
             queue.task_done()
             break
-
+        #TODO : Here we need to implement method to manipulate output in order to use them properly.
+        """{[frame_id : 1,
+            masks : [[mask_id: 1, mask_area : float, .... etc],[.....]]
+            ],
+            [frame_id: 2] ....
+            ]
+        }
+        Something like this.....
+        """
         saver = args.saver
         mask = args.mask
         frame_name = args.frame_name
@@ -154,7 +172,7 @@ def save_result(queue: Queue):
         obj_to_tmp_id = args.obj_to_tmp_id
         segments_info = args.segments_info
         all_obj_ids = [k.id for k in obj_to_tmp_id]
-
+    
         # remap indices
         if saver.need_remapping:
             new_mask = torch.zeros_like(mask)
@@ -164,6 +182,7 @@ def save_result(queue: Queue):
 
         # record output in the json file
         if saver.json_style == 'vipseg':
+            #print(segments_info)
             for seg in segments_info:
                 area = int((mask == seg['id']).sum())
                 seg['area'] = area
@@ -177,6 +196,7 @@ def save_result(queue: Queue):
             saver.all_annotations.append(this_annotation)
         elif saver.json_style == 'burst':
             for seg in segments_info:
+            
                 seg['mask'] = mask == seg['id']
                 seg['area'] = int(seg['mask'].sum())
                 coco_mask = mask_util.encode(np.asfortranarray(seg['mask'].numpy()))
@@ -208,17 +228,39 @@ def save_result(queue: Queue):
             if saver.object_manager.use_long_id:
                 out_mask = mask.numpy().astype(np.uint32)
                 rgb_mask = np.zeros((*out_mask.shape[-2:], 3), dtype=np.uint8)
-                for id in all_obj_ids:
+                id_tracking = np.zeros((*out_mask.shape[-2:], 3), dtype=np.uint8)
+                current_dict = {}
+                for index,id in enumerate(all_obj_ids):
                     colored_mask = saver.id2rgb_converter._id_to_rgb(id)
-                    obj_mask = (out_mask == id)
+                    obj_mask = (out_mask == id) #
+                    indices = obj_mask.nonzero()
+                    current_dict[id] = colored_mask
+                    # # Calculate the centroid of the True values
+                    # try:
+                    #     centroid_x = int(np.mean(indices[1]))
+                    #     centroid_y = int(np.mean(indices[0]))
+                    #     #my_id =  id % len(set(all_obj_ids))
+                    #     #my_id = int(hashlib.sha256(str(id).encode('utf-8')).hexdigest(), 16) % 96
+                    #     text = f"{id}"
+                    #     current_dict[id] = colored_mask
+                    #     id_tracking = cv.putText(id_tracking, text, (centroid_x, centroid_y), cv.FONT_HERSHEY_SIMPLEX, 1, colored_mask, 1)
+                    #     id_tracking = cv.circle(id_tracking, (centroid_x, centroid_y), 20, colored_mask, 2)
+                    #     rgb_mask = np.array(id_tracking)
+                    # except Exception as e:
+                    #     pass
+
+
                     rgb_mask[obj_mask] = colored_mask
                 out_img = Image.fromarray(rgb_mask)
+
+
+
             else:
                 out_mask = mask.numpy().astype(np.uint8)
                 out_img = Image.fromarray(out_mask)
                 if saver.palette is not None:
                     out_img.putpalette(saver.palette)
-
+            
             if saver.dataset != 'gradio':
                 # find a place to save the mask
                 if saver.output_postfix is not None:
@@ -229,7 +271,11 @@ def save_result(queue: Queue):
                     this_out_path = path.join(this_out_path, saver.video_name)
 
                 os.makedirs(this_out_path, exist_ok=True)
+                #out_img.save(path.join(this_out_path, frame_name[:-4] + '.png'))
                 out_img.save(path.join(this_out_path, frame_name[:-4] + '.png'))
+
+                with open(path.join(this_out_path, frame_name[:-4] + '.json'), 'w', encoding='utf-8') as f:
+                    json.dump(current_dict, f, ensure_ascii=False, indent=4,cls=NumpyEncoder)
 
             if saver.visualize and saver.object_manager.use_long_id:
                 if image_np is None:
@@ -280,3 +326,9 @@ def save_result(queue: Queue):
                     saver.writer.write(blend[:, :, ::-1])
 
         queue.task_done()
+
+    
+
+def hash_numbers(numbers):
+    hashed_numbers = [(int(hashlib.sha256(str(num).encode('utf-8')).hexdigest(), 16) % 96) for num in numbers]
+    return hashed_numbers
