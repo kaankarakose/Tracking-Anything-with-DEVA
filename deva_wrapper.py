@@ -52,8 +52,8 @@ class DEVATracker:
             gpu_id (int): GPU ID to use for processing.
         """
         # Set default paths
-        self.deva_model_path = '/nas/project_data/B1_Behavior/rush/kaan/old_method/deva_process/deva/Tracking-Anything-with-DEVA/saves/DEVA-propagation.pth'
-        self.sam_model_path = '/nas/project_data/B1_Behavior/rush/kaan/old_method/deva_process/deva/Tracking-Anything-with-DEVA/saves/sam_vit_l_0b3195.pth'
+        self.deva_model_path = '/nas/project_data/B1_Behavior/rush/kaan/first_play_local/models/deva/saves/DEVA-propagation.pth'
+        self.sam_model_path = '/nas/project_data/B1_Behavior/rush/kaan/first_play_local/models/deva/saves/sam_vit_h_4b8939.pth'
         self.mobile_sam_path = '/nas/project_data/B1_Behavior/rush/kaan/old_method/deva_process/deva/Tracking-Anything-with-DEVA/saves/mobile_sam.pt'
         
         # Set CUDA device
@@ -524,8 +524,22 @@ def process_videos(frames_dir, output_dir, gpu_id=0, num_parts=1, process_part=0
     frames_dir = Path(frames_dir)
     output_dir = Path(output_dir)
     
-    # Initialize DEVA tracker
-    tracker = DEVATracker(gpu_id=gpu_id)
+    # # Initialize DEVA tracker
+    # tracker = DEVATracker(gpu_id=gpu_id)
+    # ###TEST
+
+    # success = tracker.run_tracking(
+    #     img_path=str(frames_dir),
+    #     output_path=str(output_dir),
+    #     chunk_size=chunk_size,
+    #     temporal_setting=temporal_setting,
+    #     size=size,
+    #     mem_every=mem_every,
+    #     detection_every=detection_every,
+    #     max_num_objects=max_num_objects
+    # )
+    # raise ValueError("TESTING ONLY")
+
     
     # If specific session is provided
     if session is not None:
@@ -630,10 +644,10 @@ if __name__ == "__main__":
     
     # Base directories
     parser.add_argument("--frames_dir", type=str, 
-                       default="/nas/project_data/B1_Behavior/rush/kaan/hoi/processed_data/orginal_frames",
+                       default="/nas/project_data/B1_Behavior/rush/kaan/first_play_local/models/memflow/demo_input_images",
                        help="Directory containing input frames organized by session/camera_view")
     parser.add_argument("--output_dir", type=str, 
-                       default="/nas/project_data/B1_Behavior/rush/kaan/old_method/processed_data/deva",
+                       default="/nas/project_data/B1_Behavior/rush/kaan/first_play_local/data/tests/deva",
                        help="Base output directory for results")
     
     # Processing options
