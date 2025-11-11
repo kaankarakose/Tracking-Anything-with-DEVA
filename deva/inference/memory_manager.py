@@ -140,8 +140,8 @@ class MemoryManager:
                                             shrinkage,
                                             query_key,
                                             selection,
-                                            add_batch_dim=True)
-
+                                            add_batch_dim=True)   # Chane it if needed   
+                
                 if self.use_long_term:
                     affinity, usage = do_softmax(similarity,
                                                  top_k=self.top_k,
